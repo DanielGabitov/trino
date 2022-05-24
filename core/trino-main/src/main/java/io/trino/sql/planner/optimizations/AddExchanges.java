@@ -50,6 +50,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -730,6 +731,12 @@ public class AddExchanges
         private <T> Function<T, T> createDirectTranslator(SetMultimap<T, T> inputToOutput)
         {
             return input -> inputToOutput.get(input).iterator().next();
+        }
+
+        @Override
+        public PlanWithProperties visitMyJoin(MyJoinNode node, PreferredProperties preferredProperties) {
+            var actualPropertiesBuilder = new ActualProperties.Builder();
+            return new PlanWithProperties(node, actualPropertiesBuilder.build());
         }
 
         @Override

@@ -31,6 +31,7 @@ import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.iterative.IterativeOptimizer;
 import io.trino.sql.planner.iterative.Rule;
 import io.trino.sql.planner.iterative.RuleStats;
+import io.trino.sql.planner.iterative.rule.MyRule;
 import io.trino.sql.planner.iterative.rule.AddExchangesBelowPartialAggregationOverGroupIdRuleSet;
 import io.trino.sql.planner.iterative.rule.AddIntermediateAggregations;
 import io.trino.sql.planner.iterative.rule.ApplyPreferredTableExecutePartitioning;
@@ -564,6 +565,13 @@ public class PlanOptimizers
                                 new InlineProjectIntoFilter(metadata),
                                 new SimplifyFilterPredicate(metadata)))); // must run after PredicatePushDown
 
+        builder.add(
+                new IterativeOptimizer(
+                        plannerContext,
+                        ruleStats,
+                        statsCalculator,
+                        costCalculator,
+                        ImmutableSet.of(new MyRule(metadata))));
         // Perform redirection before CBO rules to ensure stats from destination connector are used
         // Perform redirection before agg, topN, limit, sample etc. push down into table scan as the destination connector may support a different set of push downs
         // Perform redirection before push down of dereferences into table scan via PushProjectionIntoTableScan

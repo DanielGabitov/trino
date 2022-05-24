@@ -50,6 +50,7 @@ import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
 import io.trino.sql.planner.plan.IntersectNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -1011,6 +1012,12 @@ public class UnaliasSymbolReferences
             return new PlanAndMappings(
                     new CorrelatedJoinNode(node.getId(), rewrittenInput.getRoot(), rewrittenSubquery.getRoot(), rewrittenCorrelation, node.getType(), newFilter, node.getOriginSubquery()),
                     resultMapping);
+        }
+
+        @Override
+        public PlanAndMappings visitMyJoin(MyJoinNode node, UnaliasContext context)
+        {
+            return new PlanAndMappings(node, context.correlationMapping);
         }
 
         @Override

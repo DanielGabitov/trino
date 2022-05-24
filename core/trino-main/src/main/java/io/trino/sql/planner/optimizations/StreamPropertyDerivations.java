@@ -42,6 +42,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -193,6 +194,11 @@ public final class StreamPropertyDerivations
         //
         // Joins
         //
+
+        @Override
+        public StreamProperties visitMyJoin(MyJoinNode node, List<StreamProperties> inputProperties) {
+            return new StreamProperties(MULTIPLE, Optional.empty(), false);
+        }
 
         @Override
         public StreamProperties visitJoin(JoinNode node, List<StreamProperties> inputProperties)

@@ -22,6 +22,7 @@ import io.trino.server.DynamicFilterService;
 import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.split.MySplitSource;
 import io.trino.split.SampledSplitSource;
 import io.trino.split.SplitManager;
 import io.trino.split.SplitSource;
@@ -37,6 +38,7 @@ import io.trino.sql.planner.plan.ExplainAnalyzeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -190,6 +192,11 @@ public class SplitSourceFactory
             splitSources.add(splitSource);
 
             return ImmutableMap.of(node.getId(), splitSource);
+        }
+
+        @Override
+        public Map<PlanNodeId, SplitSource> visitMyJoin(MyJoinNode node, Void context) {
+            return ImmutableMap.of(node.getId(), new MySplitSource());
         }
 
         @Override

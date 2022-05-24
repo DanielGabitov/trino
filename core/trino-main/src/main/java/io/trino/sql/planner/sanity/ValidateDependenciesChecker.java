@@ -38,6 +38,7 @@ import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
 import io.trino.sql.planner.plan.IntersectNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -414,6 +415,11 @@ public final class ValidateDependenciesChecker
 
             checkDependencies(source.getOutputSymbols(), node.getOutputSymbols(), "Invalid node. Output column dependencies (%s) not in source plan output (%s)", node.getOutputSymbols(), source.getOutputSymbols());
 
+            return null;
+        }
+
+        @Override
+        public Void visitMyJoin(MyJoinNode node, Set<Symbol> boundSymbols) {
             return null;
         }
 

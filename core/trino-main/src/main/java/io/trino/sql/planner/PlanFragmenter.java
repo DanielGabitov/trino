@@ -35,6 +35,7 @@ import io.trino.spi.type.Type;
 import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.ExplainAnalyzeNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.OutputNode;
 import io.trino.sql.planner.plan.PatternRecognitionNode;
@@ -285,6 +286,18 @@ public class PlanFragmenter
                 context.get().setSingleNodeDistribution();
             }
 
+            return context.defaultRewrite(node, context.get());
+        }
+
+        @Override
+        public PlanNode visitMyJoin(MyJoinNode node, RewriteContext<FragmentProperties> context)
+        {
+            context.get().partitionedSources.add(node.getId());
+            context.get().partitioningHandle = Optional.of(
+                    new PartitioningHandle(
+                            Optional.empty(),
+                            Optional.empty(),
+                            SOURCE_DISTRIBUTION.getConnectorHandle()));
             return context.defaultRewrite(node, context.get());
         }
 

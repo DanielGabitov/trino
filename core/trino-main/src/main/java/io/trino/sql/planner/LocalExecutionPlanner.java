@@ -127,6 +127,7 @@ import io.trino.operator.join.LookupSourceFactory;
 import io.trino.operator.join.NestedLoopJoinBridge;
 import io.trino.operator.join.NestedLoopJoinPagesSupplier;
 import io.trino.operator.join.PartitionedLookupSourceFactory;
+import io.trino.operator.join.MyJoinOperator.MyJoinOperatorFactory;
 import io.trino.operator.output.PartitionedOutputOperator.PartitionedOutputFactory;
 import io.trino.operator.output.PositionsAppenderFactory;
 import io.trino.operator.output.TaskOutputOperator.TaskOutputFactory;
@@ -195,6 +196,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -691,7 +693,7 @@ public class LocalExecutionPlanner
         {
             if (pipelineExecutionStrategy == GROUPED_EXECUTION) {
                 if (inputDriver) {
-                    checkArgument(firstOperatorFactory instanceof ScanFilterAndProjectOperatorFactory || firstOperatorFactory instanceof TableScanOperatorFactory);
+                    checkArgument(firstOperatorFactory instanceof ScanFilterAndProjectOperatorFactory || firstOperatorFactory instanceof TableScanOperatorFactory || firstOperatorFactory instanceof MyJoinOperatorFactory);
                 }
                 else {
                     checkArgument(firstOperatorFactory instanceof LocalExchangeSourceOperatorFactory || firstOperatorFactory instanceof LookupOuterOperatorFactory);
@@ -2512,6 +2514,21 @@ public class LocalExecutionPlanner
         private Set<SymbolReference> getSymbolReferences(Collection<Symbol> symbols)
         {
             return symbols.stream().map(Symbol::toSymbolReference).collect(toImmutableSet());
+        }
+
+        @Override
+        public PhysicalOperation visitMyJoin(MyJoinNode node, LocalExecutionPlanContext context)
+        {
+            OperatorFactory operatorFactory = new MyJoinOperatorFactory(context.getNextOperatorId(), node.getId(), null, null);
+            // build output mapping
+            ImmutableMap.Builder<Symbol, Integer> outputMappings = ImmutableMap.builder();
+            List<Symbol> outputSymbols = node.getOutputSymbols();
+            for (int i = 0; i < outputSymbols.size(); i++) {
+                Symbol symbol = outputSymbols.get(i);
+                outputMappings.put(symbol, i);
+            }
+
+            return new PhysicalOperation(operatorFactory, outputMappings.buildOrThrow(), context, UNGROUPED_EXECUTION);
         }
 
         private PhysicalOperation createNestedLoopJoin(JoinNode node, Set<DynamicFilterId> localDynamicFilters, LocalExecutionPlanContext context)

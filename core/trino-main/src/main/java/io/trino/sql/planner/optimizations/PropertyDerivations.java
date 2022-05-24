@@ -51,6 +51,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -489,6 +490,11 @@ public final class PropertyDerivations
             return ActualProperties.builder()
                     .global(coordinatorSingleStreamPartition())
                     .build();
+        }
+
+        @Override
+        public ActualProperties visitMyJoin(MyJoinNode node, List<ActualProperties> inputProperties) {
+            return ActualProperties.builder().build();
         }
 
         @Override

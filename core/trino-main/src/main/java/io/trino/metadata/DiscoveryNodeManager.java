@@ -343,6 +343,10 @@ public final class DiscoveryNodeManager
     @Override
     public synchronized Set<InternalNode> getActiveConnectorNodes(CatalogName catalogName)
     {
+        // trino does not have connector for JanusGraph, so I had to use duct tape a little
+        if (catalogName.getCatalogName().equals("MyCatalogName")) {
+            return getNodes(ACTIVE);
+        }
         // activeNodesByCatalogName is immutable
         return activeNodesByCatalogName.get(catalogName);
     }
