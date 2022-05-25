@@ -39,6 +39,9 @@ public class MyRule implements Rule<JoinNode> {
 
     @Override
     public Result apply(JoinNode node, Captures captures, Context context) {
+        if (node.isCrossJoin() || node.getType() != JoinNode.Type.INNER) {
+            return Result.empty();
+        }
         return Result.ofPlanNode(
                 new MyJoinNode(
                         node.getId(),
