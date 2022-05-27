@@ -310,6 +310,9 @@ public class IterativeOptimizer
             {
                 return context.warningCollector;
             }
+
+            @Override
+            public Memo getMemo() {return context.memo;}
         };
     }
 

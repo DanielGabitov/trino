@@ -272,6 +272,9 @@ public class RuleAssert
             {
                 return WarningCollector.NOOP;
             }
+
+            @Override
+            public Memo getMemo() {return memo;}
         };
     }
 

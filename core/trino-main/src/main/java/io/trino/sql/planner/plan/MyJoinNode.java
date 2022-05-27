@@ -7,9 +7,12 @@ import io.trino.sql.planner.Symbol;
 
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class MyJoinNode extends PlanNode {
+    private final PlanNode left;
+    private final PlanNode right;
     private final JoinNode.Type type;
-    private final List<JoinNode.EquiJoinClause> criteria;
     private final List<Symbol> leftOutputSymbols;
     private final List<Symbol> rightOutputSymbols;
 
@@ -17,19 +20,21 @@ public class MyJoinNode extends PlanNode {
     public MyJoinNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("type") JoinNode.Type type,
-            @JsonProperty("criteria") List<JoinNode.EquiJoinClause> criteria,
+            @JsonProperty("left") PlanNode left,
+            @JsonProperty("right") PlanNode right,
             @JsonProperty("leftOutputSymbols") List<Symbol> leftOutputSymbols,
             @JsonProperty("rightOutputSymbols") List<Symbol> rightOutputSymbols) {
         super(id);
+        this.left = left;
+        this.right = right;
         this.type = type;
-        this.criteria = criteria;
         this.leftOutputSymbols = leftOutputSymbols;
         this.rightOutputSymbols = rightOutputSymbols;
     }
 
     @Override
     public List<PlanNode> getSources() {
-        return ImmutableList.of();
+        return ImmutableList.of(left, right);
     }
 
     @Override
@@ -48,8 +53,20 @@ public class MyJoinNode extends PlanNode {
 
     @Override
     public PlanNode replaceChildren(List<PlanNode> newChildren) {
-        assert false;
-        return this;
+        checkArgument(newChildren.size() == 2, "expected to be exact 2 sources");
+        return new MyJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), leftOutputSymbols, rightOutputSymbols);
+    }
+
+    @JsonProperty("left")
+    public PlanNode getLeft()
+    {
+        return left;
+    }
+
+    @JsonProperty("right")
+    public PlanNode getRight()
+    {
+        return right;
     }
 
     @JsonProperty("type")
@@ -58,10 +75,6 @@ public class MyJoinNode extends PlanNode {
         return type;
     }
 
-    @JsonProperty("criteria")
-    public List<JoinNode.EquiJoinClause> getCriteria() {
-        return criteria;
-    }
 
     @JsonProperty("leftOutputSymbols")
     public List<Symbol> getLeftOutputSymbols(){

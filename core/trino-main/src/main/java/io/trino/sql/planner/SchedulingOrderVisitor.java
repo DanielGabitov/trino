@@ -92,7 +92,8 @@ public final class SchedulingOrderVisitor
         @Override
         public Void visitMyJoin(MyJoinNode node, Void context)
         {
-            schedulingOrder.accept(node.getId());
+            node.getRight().accept(this, context);
+            node.getLeft().accept(this, context);
             return null;
         }
     }

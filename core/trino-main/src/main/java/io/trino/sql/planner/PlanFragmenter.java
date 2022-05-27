@@ -292,7 +292,6 @@ public class PlanFragmenter
         @Override
         public PlanNode visitMyJoin(MyJoinNode node, RewriteContext<FragmentProperties> context)
         {
-            context.get().partitionedSources.add(node.getId());
             context.get().partitioningHandle = Optional.of(
                     new PartitioningHandle(
                             Optional.empty(),

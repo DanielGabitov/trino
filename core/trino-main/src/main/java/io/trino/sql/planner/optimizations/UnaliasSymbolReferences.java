@@ -1036,7 +1036,7 @@ public class UnaliasSymbolReferences
 
             ImmutableList.Builder<JoinNode.EquiJoinClause> builder = ImmutableList.builder();
             for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
-                builder.add(new JoinNode.EquiJoinClause(mapper.map(clause.getLeft()), mapper.map(clause.getRight())));
+                builder.add(new JoinNode.EquiJoinClause(mapper.map(clause.getLeft()), mapper.map(clause.getRight()), clause.getMyLeft(), clause.getMyRight()));
             }
             List<JoinNode.EquiJoinClause> newCriteria = builder.build();
 
