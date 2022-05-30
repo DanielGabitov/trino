@@ -22,7 +22,6 @@ import io.trino.server.DynamicFilterService;
 import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.split.MySplitSource;
 import io.trino.split.SampledSplitSource;
 import io.trino.split.SplitManager;
 import io.trino.split.SplitSource;
@@ -196,7 +195,12 @@ public class SplitSourceFactory
 
         @Override
         public Map<PlanNodeId, SplitSource> visitMyJoin(MyJoinNode node, Void context) {
-            return ImmutableMap.of(node.getId(), new MySplitSource());
+            Map<PlanNodeId, SplitSource> leftSplits = node.getLeft().accept(this, context);
+            Map<PlanNodeId, SplitSource> rightSplits = node.getRight().accept(this, context);
+            return ImmutableMap.<PlanNodeId, SplitSource>builder()
+                    .putAll(leftSplits)
+                    .putAll(rightSplits)
+                    .buildOrThrow();
         }
 
         @Override

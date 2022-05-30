@@ -28,7 +28,6 @@ import io.trino.operator.PartitionFunction;
 import io.trino.spi.connector.BucketFunction;
 import io.trino.spi.connector.ConnectorBucketNodeMap;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
-import io.trino.spi.connector.MyConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPartitionHandle;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.type.Type;
@@ -243,10 +242,6 @@ public class NodePartitioningManager
     private ConnectorNodePartitioningProvider getPartitioningProvider(CatalogName catalogName)
     {
         ConnectorNodePartitioningProvider partitioningProvider = partitioningProviders.get(requireNonNull(catalogName, "catalogName is null"));
-        // trino does not have connector for JanusGraph, so I had to use duct tape a little
-        if (partitioningProvider == null) {
-            partitioningProvider = new MyConnectorNodePartitioningProvider();
-        }
         checkArgument(partitioningProvider != null, "No partitioning provider for connector %s", catalogName);
         return partitioningProvider;
     }

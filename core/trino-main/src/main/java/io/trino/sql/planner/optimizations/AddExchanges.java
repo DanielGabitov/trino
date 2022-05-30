@@ -734,9 +734,21 @@ public class AddExchanges
         }
 
         @Override
-        public PlanWithProperties visitMyJoin(MyJoinNode node, PreferredProperties preferredProperties) {
-            var actualPropertiesBuilder = new ActualProperties.Builder();
-            return new PlanWithProperties(node, actualPropertiesBuilder.build());
+            public PlanWithProperties visitMyJoin(MyJoinNode node, PreferredProperties preferredProperties) {
+            PlanWithProperties left = node.getLeft().accept(this, PreferredProperties.any());
+            PlanWithProperties right = node.getRight().accept(this, PreferredProperties.any());
+            right = withDerivedProperties(
+                    replicatedExchange(idAllocator.getNextId(), REMOTE, right.getNode()),
+                    right.getProperties());
+            MyJoinNode result = new MyJoinNode(
+                    node.getId(),
+                    node.getType(),
+                    left.getNode(),
+                    right.getNode(),
+                    node.getLeftOutputSymbols(),
+                    node.getRightOutputSymbols()
+            );
+            return new PlanWithProperties(result, deriveProperties(result, ImmutableList.of(left.getProperties(), right.getProperties())));
         }
 
         @Override

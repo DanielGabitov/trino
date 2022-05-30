@@ -2519,6 +2519,11 @@ public class LocalExecutionPlanner
         @Override
         public PhysicalOperation visitMyJoin(MyJoinNode node, LocalExecutionPlanContext context)
         {
+            var probeSource = node.getLeft().accept(this, context);
+
+            LocalExecutionPlanContext buildContext = context.createSubContext();
+            PhysicalOperation buildSource = node.getRight().accept(this, buildContext);
+
             OperatorFactory operatorFactory = new MyJoinOperatorFactory(context.getNextOperatorId(), node.getId(), null, null);
             // build output mapping
             ImmutableMap.Builder<Symbol, Integer> outputMappings = ImmutableMap.builder();
@@ -2527,8 +2532,7 @@ public class LocalExecutionPlanner
                 Symbol symbol = outputSymbols.get(i);
                 outputMappings.put(symbol, i);
             }
-
-            return new PhysicalOperation(operatorFactory, outputMappings.buildOrThrow(), context, UNGROUPED_EXECUTION);
+            return new PhysicalOperation(operatorFactory, outputMappings.buildOrThrow(), context, probeSource);
         }
 
         private PhysicalOperation createNestedLoopJoin(JoinNode node, Set<DynamicFilterId> localDynamicFilters, LocalExecutionPlanContext context)
