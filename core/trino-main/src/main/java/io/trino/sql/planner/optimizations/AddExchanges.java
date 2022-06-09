@@ -746,7 +746,8 @@ public class AddExchanges
                     left.getNode(),
                     right.getNode(),
                     node.getLeftOutputSymbols(),
-                    node.getRightOutputSymbols()
+                    node.getRightOutputSymbols(),
+                    node.getJoinMap()
             );
             return new PlanWithProperties(result, deriveProperties(result, ImmutableList.of(left.getProperties(), right.getProperties())));
         }

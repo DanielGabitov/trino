@@ -1,5 +1,6 @@
 package io.trino.sql.planner.iterative.rule;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.trino.matching.Capture;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
@@ -12,9 +13,21 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.Patterns;
 import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.TableScanNode;
-import io.trino.sql.tree.*;
+import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.InPredicate;
+import io.trino.sql.tree.InListExpression;
+import io.trino.sql.tree.SymbolReference;
+import io.trino.sql.tree.LongLiteral;
 
+import org.testng.collections.Lists;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.matching.Capture.newCapture;
@@ -44,8 +57,19 @@ public class MyRule implements Rule<JoinNode> {
         return PATTERN;
     }
 
-    public List<Expression> getJoinIds(PlanNode left, PlanNode right, JoinNode.EquiJoinClause clause) {
-        return List.of(new LongLiteral("1"), new LongLiteral("3"));
+    public Map<Long, List<Long>> getJoinIds(PlanNode left, PlanNode right, JoinNode.EquiJoinClause clause) {
+        try (FileReader fr = new FileReader("data.json");
+             BufferedReader br = new BufferedReader(fr)) {
+            Map<String, List<String>> result =
+                    new ObjectMapper().readValue(br, HashMap.class);
+            return result.entrySet().stream().
+                    map(entry -> Map.entry(
+                            Long.parseLong(entry.getKey()),
+                            entry.getValue().stream().map(Long::parseLong).collect(Collectors.toList())
+                    )).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -70,10 +94,20 @@ public class MyRule implements Rule<JoinNode> {
         checkArgument(left instanceof TableScanNode);
         checkArgument(right instanceof TableScanNode);
 
-        List<Expression> filterIds = getJoinIds(left, right, criteria);
-        var leftPredicate = new InPredicate(criteria.getLeft().toSymbolReference(), new InListExpression(filterIds));
-        var rightPredicate = new InPredicate(criteria.getRight().toSymbolReference(), new InListExpression(filterIds));
+        var joinMap = getJoinIds(left, right, criteria);
+        var expressionMap =
+                joinMap.entrySet().stream().
+                        map(x -> Map.entry(
+                                (Expression) new LongLiteral(x.getKey().toString()),
+                                x.getValue().stream().
+                                        map(y -> (Expression) new LongLiteral(y.toString())).
+                                        collect(Collectors.toList()))
+                ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+        List<Expression> leftFilterIds = expressionMap.values().stream().flatMap(List::stream).distinct().collect(Collectors.toList());
+        List<Expression> rightFilterIds = Lists.newArrayList(expressionMap.keySet());
+        var leftPredicate = new InPredicate(new SymbolReference("orderkey"), new InListExpression(leftFilterIds));
+        var rightPredicate = new InPredicate(criteria.getRight().toSymbolReference(), new InListExpression(rightFilterIds));
         var leftFilterNode = new FilterNode(context.getIdAllocator().getNextId(), left, leftPredicate);
         var rightFilterNode = new FilterNode(context.getIdAllocator().getNextId(), right, rightPredicate);
 
@@ -81,10 +115,11 @@ public class MyRule implements Rule<JoinNode> {
                 new MyJoinNode(
                         node.getId(),
                         node.getType(),
-                        leftFilterNode,
                         rightFilterNode,
+                        leftFilterNode,
+                        node.getRightOutputSymbols(),
                         node.getLeftOutputSymbols(),
-                        node.getRightOutputSymbols())
+                        joinMap)
         );
     }
 }

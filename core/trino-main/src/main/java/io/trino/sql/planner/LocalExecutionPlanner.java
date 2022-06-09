@@ -128,6 +128,7 @@ import io.trino.operator.join.NestedLoopJoinBridge;
 import io.trino.operator.join.NestedLoopJoinPagesSupplier;
 import io.trino.operator.join.PartitionedLookupSourceFactory;
 import io.trino.operator.join.MyJoinOperator.MyJoinOperatorFactory;
+import io.trino.operator.join.MyBuildJoinOperator.MyBuildJoinOperatorFactory;
 import io.trino.operator.output.PartitionedOutputOperator.PartitionedOutputFactory;
 import io.trino.operator.output.PositionsAppenderFactory;
 import io.trino.operator.output.TaskOutputOperator.TaskOutputFactory;
@@ -2524,7 +2525,6 @@ public class LocalExecutionPlanner
             LocalExecutionPlanContext buildContext = context.createSubContext();
             PhysicalOperation buildSource = node.getRight().accept(this, buildContext);
 
-            OperatorFactory operatorFactory = new MyJoinOperatorFactory(context.getNextOperatorId(), node.getId(), null, null);
             // build output mapping
             ImmutableMap.Builder<Symbol, Integer> outputMappings = ImmutableMap.builder();
             List<Symbol> outputSymbols = node.getOutputSymbols();
@@ -2532,6 +2532,32 @@ public class LocalExecutionPlanner
                 Symbol symbol = outputSymbols.get(i);
                 outputMappings.put(symbol, i);
             }
+
+            List<Integer> probeChannels = getChannelsForSymbols(node.getLeftOutputSymbols(), probeSource.getLayout());
+            List<Integer> buildChannels = getChannelsForSymbols(node.getRightOutputSymbols(), buildSource.getLayout());
+
+            JoinBridgeManager<NestedLoopJoinBridge> nestedLoopJoinBridgeManager = new JoinBridgeManager<>(
+                    false,
+                    probeSource.getPipelineExecutionStrategy(),
+                    buildSource.getPipelineExecutionStrategy(),
+                    lifespan -> new NestedLoopJoinPagesSupplier(),
+                    buildSource.getTypes());
+            MyBuildJoinOperatorFactory buildOperatorFactory = new MyBuildJoinOperatorFactory(
+                    buildContext.getNextOperatorId(),
+                    node.getId(),
+                    nestedLoopJoinBridgeManager);
+
+            context.addDriverFactory(
+                    buildContext.isInputDriver(),
+                    false,
+                    new PhysicalOperation(buildOperatorFactory, buildSource),
+                    buildContext.getDriverInstanceCount());
+
+            OperatorFactory operatorFactory = new MyJoinOperatorFactory(
+                    context.getNextOperatorId(), node.getId(), node.getJoinMap(),
+                    nestedLoopJoinBridgeManager, probeChannels, buildChannels
+            );
+
             return new PhysicalOperation(operatorFactory, outputMappings.buildOrThrow(), context, probeSource);
         }
 

@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableList;
 import io.trino.sql.planner.Symbol;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -15,6 +17,7 @@ public class MyJoinNode extends PlanNode {
     private final JoinNode.Type type;
     private final List<Symbol> leftOutputSymbols;
     private final List<Symbol> rightOutputSymbols;
+    private final Map<Long, List<Long>> joinMap;
 
     @JsonCreator
     public MyJoinNode(
@@ -23,13 +26,15 @@ public class MyJoinNode extends PlanNode {
             @JsonProperty("left") PlanNode left,
             @JsonProperty("right") PlanNode right,
             @JsonProperty("leftOutputSymbols") List<Symbol> leftOutputSymbols,
-            @JsonProperty("rightOutputSymbols") List<Symbol> rightOutputSymbols) {
+            @JsonProperty("rightOutputSymbols") List<Symbol> rightOutputSymbols,
+            @JsonProperty("joinMap") Map<Long, List<Long>> joinMap) {
         super(id);
         this.left = left;
         this.right = right;
         this.type = type;
         this.leftOutputSymbols = leftOutputSymbols;
         this.rightOutputSymbols = rightOutputSymbols;
+        this.joinMap = joinMap;
     }
 
     @Override
@@ -54,7 +59,7 @@ public class MyJoinNode extends PlanNode {
     @Override
     public PlanNode replaceChildren(List<PlanNode> newChildren) {
         checkArgument(newChildren.size() == 2, "expected to be exact 2 sources");
-        return new MyJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), leftOutputSymbols, rightOutputSymbols);
+        return new MyJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), leftOutputSymbols, rightOutputSymbols, joinMap);
     }
 
     @JsonProperty("left")
@@ -75,6 +80,11 @@ public class MyJoinNode extends PlanNode {
         return type;
     }
 
+    @JsonProperty("joinMap")
+    public Map<Long, List<Long>> getJoinMap()
+    {
+        return joinMap;
+    }
 
     @JsonProperty("leftOutputSymbols")
     public List<Symbol> getLeftOutputSymbols(){
