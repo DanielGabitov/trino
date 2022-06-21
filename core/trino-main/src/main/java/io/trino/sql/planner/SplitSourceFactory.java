@@ -37,6 +37,7 @@ import io.trino.sql.planner.plan.ExplainAnalyzeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -190,6 +191,16 @@ public class SplitSourceFactory
             splitSources.add(splitSource);
 
             return ImmutableMap.of(node.getId(), splitSource);
+        }
+
+        @Override
+        public Map<PlanNodeId, SplitSource> visitMyJoin(MyJoinNode node, Void context) {
+            Map<PlanNodeId, SplitSource> leftSplits = node.getLeft().accept(this, context);
+            Map<PlanNodeId, SplitSource> rightSplits = node.getRight().accept(this, context);
+            return ImmutableMap.<PlanNodeId, SplitSource>builder()
+                    .putAll(leftSplits)
+                    .putAll(rightSplits)
+                    .buildOrThrow();
         }
 
         @Override

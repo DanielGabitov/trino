@@ -47,6 +47,7 @@ import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexJoinNode.EquiJoinClause;
 import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanVisitor;
@@ -305,6 +306,16 @@ public class HashGenerationOptimizer
                             node.isPartial(),
                             Optional.of(hashSymbol)),
                     child.getHashSymbols());
+        }
+
+        @Override
+        public PlanWithProperties visitMyJoin(MyJoinNode node, HashComputationSet parentPreference) {
+            PlanWithProperties left = planAndEnforce(node.getLeft(), new HashComputationSet(), true, new HashComputationSet());
+            PlanWithProperties right = planAndEnforce(node.getRight(), new HashComputationSet(), true, new HashComputationSet());
+            checkState(left.getHashSymbols().isEmpty() && right.getHashSymbols().isEmpty());
+            return new PlanWithProperties(
+                    replaceChildren(node, ImmutableList.of(left.getNode(), right.getNode())),
+                    ImmutableMap.of());
         }
 
         @Override

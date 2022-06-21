@@ -50,6 +50,7 @@ import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
 import io.trino.sql.planner.plan.IntersectNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -1014,6 +1015,12 @@ public class UnaliasSymbolReferences
         }
 
         @Override
+        public PlanAndMappings visitMyJoin(MyJoinNode node, UnaliasContext context)
+        {
+            return new PlanAndMappings(node, context.correlationMapping);
+        }
+
+        @Override
         public PlanAndMappings visitJoin(JoinNode node, UnaliasContext context)
         {
             // it is assumed that symbols are distinct between left and right join source. Only symbols from outer correlation might be the exception
@@ -1029,7 +1036,7 @@ public class UnaliasSymbolReferences
 
             ImmutableList.Builder<JoinNode.EquiJoinClause> builder = ImmutableList.builder();
             for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
-                builder.add(new JoinNode.EquiJoinClause(mapper.map(clause.getLeft()), mapper.map(clause.getRight())));
+                builder.add(new JoinNode.EquiJoinClause(mapper.map(clause.getLeft()), mapper.map(clause.getRight()), clause.getMyLeft(), clause.getMyRight()));
             }
             List<JoinNode.EquiJoinClause> newCriteria = builder.build();
 

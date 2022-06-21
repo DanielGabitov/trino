@@ -58,6 +58,8 @@ public interface Rule<T>
         void checkTimeoutNotExhausted();
 
         WarningCollector getWarningCollector();
+
+        Memo getMemo();
     }
 
     final class Result

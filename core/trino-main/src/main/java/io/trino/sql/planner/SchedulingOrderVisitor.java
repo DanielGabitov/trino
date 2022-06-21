@@ -16,6 +16,7 @@ package io.trino.sql.planner;
 
 import com.google.common.collect.ImmutableList;
 import io.trino.sql.planner.plan.IndexJoinNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
@@ -85,6 +86,14 @@ public final class SchedulingOrderVisitor
         public Void visitTableScan(TableScanNode node, Void context)
         {
             schedulingOrder.accept(node.getId());
+            return null;
+        }
+
+        @Override
+        public Void visitMyJoin(MyJoinNode node, Void context)
+        {
+            node.getRight().accept(this, context);
+            node.getLeft().accept(this, context);
             return null;
         }
     }

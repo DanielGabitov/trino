@@ -40,6 +40,7 @@ import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.ExplainAnalyzeNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.OutputNode;
@@ -720,6 +721,19 @@ public class AddLocalExchanges
         //
         // Joins
         //
+
+        @Override
+        public PlanWithProperties visitMyJoin(MyJoinNode node, StreamPreferredProperties parentPreferences)
+        {
+            PlanWithProperties probe = planAndEnforce(
+                    node.getLeft(),
+                    defaultParallelism(session),
+                    parentPreferences.constrainTo(node.getLeft().getOutputSymbols()).withDefaultParallelism(session));
+            // todo parallelism
+            StreamPreferredProperties buildPreference = singleStream();
+            PlanWithProperties build = planAndEnforce(node.getRight(), buildPreference, buildPreference);
+            return rebaseAndDeriveProperties(node, ImmutableList.of(probe, build));
+        }
 
         @Override
         public PlanWithProperties visitJoin(JoinNode node, StreamPreferredProperties parentPreferences)

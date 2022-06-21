@@ -115,6 +115,11 @@ public final class Patterns
         return typeOf(CorrelatedJoinNode.class);
     }
 
+    public static Pattern<MyJoinNode> myJoin()
+    {
+        return typeOf(MyJoinNode.class);
+    }
+
     public static Pattern<OffsetNode> offset()
     {
         return typeOf(OffsetNode.class);

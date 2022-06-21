@@ -248,7 +248,8 @@ public class NodePartitioningManager
 
     private static List<InternalNode> createArbitraryBucketToNode(List<InternalNode> nodes, int bucketCount)
     {
-        return cyclingShuffledStream(nodes)
+        // Caused infinite loop. Looks like a bug
+        return nodes.stream()
                 .limit(bucketCount)
                 .collect(toImmutableList());
     }

@@ -57,6 +57,7 @@ import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CoalesceExpression;
 import io.trino.sql.tree.ComparisonExpression;
+import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Except;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
@@ -537,6 +538,14 @@ class RelationPlanner
         return planJoin(analysis.getJoinCriteria(node), node.getType(), analysis.getScope(node), leftPlan, rightPlan, analysis.getSubqueries(node));
     }
 
+    // todo might be more complicated equiClaueses
+    private String getIdentifierValue(Expression expression) {
+        checkArgument(expression instanceof DereferenceExpression);
+        var field = ((DereferenceExpression) expression).getField();
+        checkArgument(field.isPresent());
+        return field.get().getValue();
+    }
+
     private RelationPlan planJoin(Expression criteria, Join.Type type, Scope scope, RelationPlan leftPlan, RelationPlan rightPlan, Analysis.SubqueryAnalysis subqueries)
     {
         // NOTE: symbols must be in the same order as the outputDescriptor
@@ -616,10 +625,13 @@ class RelationPlanner
 
             for (int i = 0; i < leftComparisonExpressions.size(); i++) {
                 if (joinConditionComparisonOperators.get(i) == ComparisonExpression.Operator.EQUAL) {
-                    Symbol leftSymbol = leftCoercions.get(leftComparisonExpressions.get(i));
-                    Symbol rightSymbol = rightCoercions.get(rightComparisonExpressions.get(i));
-
-                    equiClauses.add(new JoinNode.EquiJoinClause(leftSymbol, rightSymbol));
+                    Expression leftExpression = leftComparisonExpressions.get(i);
+                    Expression rightExpression = rightComparisonExpressions.get(i);
+                    Symbol leftSymbol = leftCoercions.get(leftExpression);
+                    Symbol rightSymbol = rightCoercions.get(rightExpression);
+                    String leftInitialSymbol = getIdentifierValue(leftExpression);
+                    String rightInitialSymbol = getIdentifierValue(rightExpression);
+                    equiClauses.add(new JoinNode.EquiJoinClause(leftSymbol, rightSymbol, leftInitialSymbol, rightInitialSymbol));
                 }
                 else {
                     postInnerJoinConditions.add(

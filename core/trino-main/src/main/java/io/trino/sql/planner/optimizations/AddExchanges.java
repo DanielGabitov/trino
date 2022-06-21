@@ -50,6 +50,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.GroupIdNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
+import io.trino.sql.planner.plan.MyJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
@@ -730,6 +731,25 @@ public class AddExchanges
         private <T> Function<T, T> createDirectTranslator(SetMultimap<T, T> inputToOutput)
         {
             return input -> inputToOutput.get(input).iterator().next();
+        }
+
+        @Override
+            public PlanWithProperties visitMyJoin(MyJoinNode node, PreferredProperties preferredProperties) {
+            PlanWithProperties left = node.getLeft().accept(this, PreferredProperties.any());
+            PlanWithProperties right = node.getRight().accept(this, PreferredProperties.any());
+            right = withDerivedProperties(
+                    replicatedExchange(idAllocator.getNextId(), REMOTE, right.getNode()),
+                    right.getProperties());
+            MyJoinNode result = new MyJoinNode(
+                    node.getId(),
+                    node.getType(),
+                    left.getNode(),
+                    right.getNode(),
+                    node.getLeftOutputSymbols(),
+                    node.getRightOutputSymbols(),
+                    node.getJoinMap()
+            );
+            return new PlanWithProperties(result, deriveProperties(result, ImmutableList.of(left.getProperties(), right.getProperties())));
         }
 
         @Override

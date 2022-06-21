@@ -43,6 +43,8 @@ public final class MemoryQueryRunner
     {
         return builder()
                 .setExtraProperties(extraProperties)
+                // current limitation
+                .setNodeCount(1)
                 .setInitialTables(tables)
                 .build();
     }

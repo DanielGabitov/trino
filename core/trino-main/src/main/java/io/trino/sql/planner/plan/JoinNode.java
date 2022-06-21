@@ -364,12 +364,27 @@ public class JoinNode
     {
         private final Symbol left;
         private final Symbol right;
+        private final String myLeft;
+        private final String myRight;
 
         @JsonCreator
-        public EquiJoinClause(@JsonProperty("left") Symbol left, @JsonProperty("right") Symbol right)
+        public EquiJoinClause(@JsonProperty("left") Symbol left,
+                              @JsonProperty("right") Symbol right,
+                              @JsonProperty("myLeft") String myLeft,
+                              @JsonProperty("myRight") String myRight)
         {
             this.left = requireNonNull(left, "left is null");
             this.right = requireNonNull(right, "right is null");
+            this.myLeft = requireNonNull(myLeft, "myLeft is null");
+            this.myRight = requireNonNull(myRight, "myRight is null");
+        }
+
+        public EquiJoinClause(Symbol left, Symbol right)
+        {
+            this.left = requireNonNull(left, "left is null");
+            this.right = requireNonNull(right, "right is null");
+            this.myLeft = "";
+            this.myRight = "";
         }
 
         @JsonProperty("left")
@@ -382,6 +397,18 @@ public class JoinNode
         public Symbol getRight()
         {
             return right;
+        }
+
+        @JsonProperty("myLeft")
+        public String getMyLeft()
+        {
+            return myLeft;
+        }
+
+        @JsonProperty("myRight")
+        public String getMyRight()
+        {
+            return myRight;
         }
 
         public ComparisonExpression toExpression()
