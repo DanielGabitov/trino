@@ -16,17 +16,17 @@ import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.InPredicate;
 import io.trino.sql.tree.InListExpression;
-import io.trino.sql.tree.SymbolReference;
 import io.trino.sql.tree.LongLiteral;
 
+import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.testng.collections.Lists;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -34,6 +34,9 @@ import static io.trino.matching.Capture.newCapture;
 import static io.trino.sql.planner.plan.Patterns.Join.left;
 import static io.trino.sql.planner.plan.Patterns.Join.right;
 import static io.trino.sql.planner.plan.Patterns.tableScan;
+
+import static org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource.traversal;
+
 
 public class MyRule implements Rule<JoinNode> {
 
@@ -58,18 +61,20 @@ public class MyRule implements Rule<JoinNode> {
     }
 
     public Map<Long, List<Long>> getJoinIds(PlanNode left, PlanNode right, JoinNode.EquiJoinClause clause) {
-        try (FileReader fr = new FileReader("data.json");
-             BufferedReader br = new BufferedReader(fr)) {
-            Map<String, List<String>> result =
-                    new ObjectMapper().readValue(br, HashMap.class);
-            return result.entrySet().stream().
-                    map(entry -> Map.entry(
-                            Long.parseLong(entry.getKey()),
-                            entry.getValue().stream().map(Long::parseLong).collect(Collectors.toList())
-                    )).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        GraphTraversalSource g = traversal().withRemote(
+                DriverRemoteConnection.using("localhost", 8182));
+        var paths = g.V().hasLabel("left").out().path().by("left_id").by("right_id").toList();
+        Map<Long, List<Long>> result = new HashMap<>();
+        for (var path : paths) {
+            var left_id = ((Number) path.get(0)).longValue();
+            var right_id = ((Number) path.get(1)).longValue();
+            if (result.containsKey(left_id)) {
+                result.get(left_id).add(right_id);
+            } else {
+                result.put(left_id, new LinkedList<>(List.of(right_id)));
+            }
         }
+        return result;
     }
 
     @Override
@@ -104,9 +109,9 @@ public class MyRule implements Rule<JoinNode> {
                                         collect(Collectors.toList()))
                 ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        List<Expression> leftFilterIds = expressionMap.values().stream().flatMap(List::stream).distinct().collect(Collectors.toList());
-        List<Expression> rightFilterIds = Lists.newArrayList(expressionMap.keySet());
-        var leftPredicate = new InPredicate(new SymbolReference("orderkey"), new InListExpression(leftFilterIds));
+        List<Expression> leftFilterIds = Lists.newArrayList(expressionMap.keySet());
+        List<Expression> rightFilterIds = expressionMap.values().stream().flatMap(List::stream).distinct().collect(Collectors.toList());
+        var leftPredicate = new InPredicate(criteria.getLeft().toSymbolReference(), new InListExpression(leftFilterIds));
         var rightPredicate = new InPredicate(criteria.getRight().toSymbolReference(), new InListExpression(rightFilterIds));
         var leftFilterNode = new FilterNode(context.getIdAllocator().getNextId(), left, leftPredicate);
         var rightFilterNode = new FilterNode(context.getIdAllocator().getNextId(), right, rightPredicate);
@@ -115,10 +120,10 @@ public class MyRule implements Rule<JoinNode> {
                 new MyJoinNode(
                         node.getId(),
                         node.getType(),
-                        rightFilterNode,
                         leftFilterNode,
-                        node.getRightOutputSymbols(),
+                        rightFilterNode,
                         node.getLeftOutputSymbols(),
+                        node.getRightOutputSymbols(),
                         joinMap)
         );
     }
